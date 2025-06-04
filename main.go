@@ -5,6 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/jmoiron/sqlx"
+	"log"
+	_ "log"
 
 	_ "github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -22,11 +24,14 @@ func main() {
 	}
 	r.POST("/", func(c *gin.Context) {
 		url := c.PostForm("url")
-		fmt.Println(url)
+		log.Println("url:", url)
 		var hashID string
 		err := DB.QueryRow("INSERT INTO urls (url) VALUES ($1) RETURNING id", url).Scan(&hashID)
 		if err != nil {
-			panic(err)
+			log.Fatal("Error inserting url")
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
 		}
 		c.JSON(200, gin.H{
 			"url": "http://localhost:8080/" + hashID,
@@ -39,14 +44,20 @@ func main() {
 		err := DB.QueryRow("SELECT url FROM urls WHERE id = $1", id).Scan(&url)
 
 		if err != nil {
-			panic(err)
+			log.Fatal("Error while fetching url")
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
 		}
 		var count int
 		err1 := DB.QueryRow("UPDATE urls SET count = count + 1 WHERE id = $1 RETURNING count", id).Scan(&count)
 		if err1 != nil {
-			panic(err)
+			log.Fatal("Error while updating count")
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
 		}
-		fmt.Println("count was ", count)
+		log.Println("count was ", count)
 		c.Redirect(302, url)
 	})
 
@@ -55,7 +66,10 @@ func main() {
 		var count int
 		err := DB.QueryRow("SELECT count FROM urls WHERE id = $1", id).Scan(&count)
 		if err != nil {
-			panic(err)
+			log.Fatal("Error while getting count")
+			c.JSON(500, gin.H{
+				"message": "Internal Server Error",
+			})
 		}
 		c.JSON(200, gin.H{
 			"count": count,
